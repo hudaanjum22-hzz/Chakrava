@@ -1,25 +1,47 @@
 {
   "expo": {
-    "name": "chakrava",
+    "name": "Chakrava",
     "slug": "chakrava",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "chakrava",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.chakrava.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#0A2540"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "https://qkirblzamykhelibxpnd.supabase.co",
+      "supabaseAnonKey": "sb_publishable_vTmUc8ibHITBQQNprckzgA_UnasoboE",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "c4c64836-a7dc-4f17-8248-344f4b260b6e"
+      }
     }
   }
 }

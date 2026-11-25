@@ -1,0 +1,305 @@
+// ============================================================
+// Chakrava — Demo Data (all mock data for offline / demo mode)
+// ============================================================
+import type {
+  Profile,
+  Bin,
+  Vehicle,
+  CollectionTask,
+  CollectionRecord,
+  SensorReading,
+} from '../types';
+
+// ─── Demo Accounts ───────────────────────────────────────────
+export const DEMO_CREDENTIALS = [
+  { email: 'admin@chakrava.demo',  password: 'demo1234', role: 'admin'  as const },
+  { email: 'driver@chakrava.demo', password: 'demo1234', role: 'driver' as const },
+];
+
+export const DEMO_PROFILES: Profile[] = [
+  {
+    id: 'profile-admin-01',
+    email: 'admin@chakrava.demo',
+    full_name: 'Priya Nair',
+    role: 'admin',
+    phone: '+91 94471 00001',
+  },
+  {
+    id: 'profile-driver-01',
+    email: 'driver@chakrava.demo',
+    full_name: 'Rajan Pillai',
+    role: 'driver',
+    vehicle_id: 'vehicle-01',
+    phone: '+91 94471 00002',
+  },
+  {
+    id: 'profile-driver-02',
+    email: 'driver2@chakrava.demo',
+    full_name: 'Suresh Kumar',
+    role: 'driver',
+    vehicle_id: 'vehicle-02',
+    phone: '+91 94471 00003',
+  },
+];
+
+// ─── Demo Bins (Anchored to Thiruvananthapuram panchayat area) ─
+export const DEMO_BINS: Bin[] = [
+  {
+    id: 'bin-001',
+    bin_code: 'BIN-001',
+    label: 'Market Junction Bin',
+    area: 'Vattiyoorkavu Ward 1',
+    lat: 8.5635,
+    lng: 76.9821,
+    capacity_litres: 100,
+    fill_pct: 92,
+    fill_rate_per_hour: 4.2,
+    status: 'critical',
+    last_collected_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    notes: 'Near vegetable market — high usage',
+  },
+  {
+    id: 'bin-002',
+    bin_code: 'BIN-002',
+    label: 'School Road Bin',
+    area: 'Vattiyoorkavu Ward 2',
+    lat: 8.5658,
+    lng: 76.9843,
+    capacity_litres: 100,
+    fill_pct: 76,
+    fill_rate_per_hour: 2.8,
+    status: 'attention',
+    last_collected_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'bin-003',
+    bin_code: 'BIN-003',
+    label: 'Temple Street Bin',
+    area: 'Vattiyoorkavu Ward 3',
+    lat: 8.5612,
+    lng: 76.9798,
+    capacity_litres: 120,
+    fill_pct: 61,
+    fill_rate_per_hour: 1.5,
+    status: 'attention',
+    last_collected_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'bin-004',
+    bin_code: 'BIN-004',
+    label: 'Bus Stand Bin',
+    area: 'Vattiyoorkavu Ward 4',
+    lat: 8.5590,
+    lng: 76.9810,
+    capacity_litres: 150,
+    fill_pct: 88,
+    fill_rate_per_hour: 5.0,
+    status: 'critical',
+    last_collected_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    notes: 'Bus stand — very high footfall',
+  },
+  {
+    id: 'bin-005',
+    bin_code: 'BIN-005',
+    label: 'Residential Block A',
+    area: 'Vattiyoorkavu Ward 5',
+    lat: 8.5670,
+    lng: 76.9865,
+    capacity_litres: 80,
+    fill_pct: 34,
+    fill_rate_per_hour: 1.2,
+    status: 'normal',
+    last_collected_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'bin-006',
+    bin_code: 'BIN-006',
+    label: 'Park Entrance Bin',
+    area: 'Vattiyoorkavu Ward 6',
+    lat: 8.5645,
+    lng: 76.9875,
+    capacity_litres: 60,
+    fill_pct: 20,
+    fill_rate_per_hour: 0.8,
+    status: 'normal',
+    last_collected_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'bin-007',
+    bin_code: 'BIN-007',
+    label: 'Health Centre Bin',
+    area: 'Vattiyoorkavu Ward 7',
+    lat: 8.5600,
+    lng: 76.9855,
+    capacity_litres: 100,
+    fill_pct: 55,
+    fill_rate_per_hour: 2.0,
+    status: 'attention',
+    last_collected_at: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'bin-008',
+    bin_code: 'BIN-008',
+    label: 'Post Office Bin',
+    area: 'Vattiyoorkavu Ward 8',
+    lat: 8.5625,
+    lng: 76.9830,
+    capacity_litres: 80,
+    fill_pct: 15,
+    fill_rate_per_hour: 0.6,
+    status: 'normal',
+    last_collected_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+// ─── Demo Vehicles ────────────────────────────────────────────
+export const DEMO_VEHICLES: Vehicle[] = [
+  {
+    id: 'vehicle-01',
+    vehicle_code: 'KL-01-WC-9801',
+    driver_id: 'profile-driver-01',
+    driver_name: 'Rajan Pillai',
+    lat: 8.5640,
+    lng: 76.9825,
+    status: 'on_route',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'vehicle-02',
+    vehicle_code: 'KL-01-WC-7742',
+    driver_id: 'profile-driver-02',
+    driver_name: 'Suresh Kumar',
+    lat: 8.5610,
+    lng: 76.9800,
+    status: 'collecting',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'vehicle-03',
+    vehicle_code: 'KL-01-WC-5531',
+    driver_id: undefined,
+    driver_name: undefined,
+    lat: 8.5580,
+    lng: 76.9780,
+    status: 'idle',
+    is_on_duty: false,
+    last_updated_at: new Date().toISOString(),
+  },
+];
+
+// ─── Demo Collection Tasks ─────────────────────────────────────
+export const DEMO_TASKS: CollectionTask[] = [
+  {
+    id: 'task-001',
+    bin_id: 'bin-001',
+    vehicle_id: 'vehicle-01',
+    priority: 1,
+    status: 'pending',
+    assigned_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    overflow_risk: 'critical',
+    eta_hours: 1.9,
+  },
+  {
+    id: 'task-002',
+    bin_id: 'bin-004',
+    vehicle_id: 'vehicle-01',
+    priority: 2,
+    status: 'pending',
+    assigned_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    overflow_risk: 'critical',
+    eta_hours: 2.4,
+  },
+  {
+    id: 'task-003',
+    bin_id: 'bin-002',
+    vehicle_id: 'vehicle-02',
+    priority: 3,
+    status: 'in_progress',
+    assigned_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    overflow_risk: 'high',
+    eta_hours: 8.6,
+  },
+  {
+    id: 'task-004',
+    bin_id: 'bin-007',
+    vehicle_id: 'vehicle-02',
+    priority: 4,
+    status: 'pending',
+    assigned_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    overflow_risk: 'medium',
+    eta_hours: 22.5,
+  },
+  {
+    id: 'task-005',
+    bin_id: 'bin-003',
+    vehicle_id: 'vehicle-01',
+    priority: 5,
+    status: 'pending',
+    assigned_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    overflow_risk: 'medium',
+    eta_hours: 26.0,
+  },
+];
+
+// ─── Demo Collection Records ───────────────────────────────────
+export const DEMO_RECORDS: CollectionRecord[] = [
+  {
+    id: 'rec-001',
+    bin_id: 'bin-005',
+    bin_code: 'BIN-005',
+    bin_label: 'Residential Block A',
+    bin_area: 'Vattiyoorkavu Ward 5',
+    driver_id: 'profile-driver-01',
+    driver_name: 'Rajan Pillai',
+    vehicle_id: 'vehicle-01',
+    vehicle_code: 'KL-01-WC-9801',
+    collected_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    fill_pct_at_collection: 78,
+    verified_by_qr: true,
+  },
+  {
+    id: 'rec-002',
+    bin_id: 'bin-006',
+    bin_code: 'BIN-006',
+    bin_label: 'Park Entrance Bin',
+    bin_area: 'Vattiyoorkavu Ward 6',
+    driver_id: 'profile-driver-01',
+    driver_name: 'Rajan Pillai',
+    vehicle_id: 'vehicle-01',
+    vehicle_code: 'KL-01-WC-9801',
+    collected_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    fill_pct_at_collection: 65,
+    verified_by_qr: true,
+  },
+  {
+    id: 'rec-003',
+    bin_id: 'bin-008',
+    bin_code: 'BIN-008',
+    bin_label: 'Post Office Bin',
+    bin_area: 'Vattiyoorkavu Ward 8',
+    driver_id: 'profile-driver-02',
+    driver_name: 'Suresh Kumar',
+    vehicle_id: 'vehicle-02',
+    vehicle_code: 'KL-01-WC-7742',
+    collected_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    fill_pct_at_collection: 82,
+    verified_by_qr: false,
+  },
+];
+
+// ─── Demo Sensor Readings (last 6 readings per bin) ───────────
+export const makeDemoReadings = (binId: string, currentFill: number): SensorReading[] => {
+  const readings: SensorReading[] = [];
+  for (let i = 5; i >= 0; i--) {
+    readings.push({
+      id: `reading-${binId}-${i}`,
+      bin_id: binId,
+      fill_pct: Math.max(0, currentFill - i * 4),
+      recorded_at: new Date(Date.now() - i * 60 * 60 * 1000).toISOString(),
+      source: 'demo',
+    });
+  }
+  return readings;
+};
