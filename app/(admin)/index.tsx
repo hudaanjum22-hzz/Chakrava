@@ -389,6 +389,11 @@ export default function AdminDashboard() {
             path: '/(admin)/map',
           },
           {
+            icon: '📍',
+            label: 'GPS Tracking',
+            path: '/gps',
+          },
+          {
             icon: '📋',
             label: 'Plan Routes',
             path: '/(admin)/tasks',

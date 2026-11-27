@@ -34,6 +34,7 @@ import {
 } from '../../../utils/formatters';
 
 import type { Bin, SensorReading } from '../../../types';
+import { supabase, DEMO_MODE } from '../../../services/supabase';
 
 export default function BinDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,15 +69,72 @@ export default function BinDetailScreen() {
   const pred = predictOverflow(bin);
   const rColor = riskColor[pred.risk];
 
-  const handleResetFill = () => {
-    updateBinFill(bin.id, 5);
+  const handleResetFill = async () => {
+    const collectedAt = new Date().toISOString();
 
-    setBin(getBinById(bin.id));
+    try {
+      if (DEMO_MODE || !supabase) {
+        updateBinFill(bin.id, 5);
+        setBin({
+          ...bin,
+          fill_pct: 5,
+          last_collected_at: collectedAt,
+        });
 
-    Alert.alert(
-      'Collected',
-      'Bin fill level has been reset to 5%.'
-    );
+        Alert.alert(
+          'Collected',
+          'Demo collection completed successfully.',
+        );
+        return;
+      }
+
+      const { error: recordError } = await supabase
+        .from('collection_records')
+        .insert({
+          bin_id: bin.id,
+          fill_before: bin.fill_pct,
+          fill_after: 5,
+          notes: 'Manually collected by admin',
+        });
+
+      if (recordError) {
+        throw recordError;
+      }
+
+      const { error: binError } = await supabase
+        .from('bins')
+        .update({
+          fill_pct: 5,
+          last_collected_at: collectedAt,
+        })
+        .eq('id', bin.id);
+
+      if (binError) {
+        Alert.alert(
+          'Collection record saved',
+          'The collection was recorded, but the bin update failed. Please refresh the bin.',
+        );
+        return;
+      }
+
+      updateBinFill(bin.id, 5);
+      setBin({
+        ...bin,
+        fill_pct: 5,
+        last_collected_at: collectedAt,
+      });
+
+      Alert.alert(
+        'Collected',
+        'Collection saved successfully. Refresh the dashboard to see the updated count.',
+      );
+    } catch (error: any) {
+      console.error('COLLECTION SAVE ERROR:', error);
+      Alert.alert(
+        'Collection failed',
+        error?.message ?? 'Could not save the collection. Please try again.',
+      );
+    }
   };
 
   return (

@@ -4,44 +4,44 @@
     "slug": "chakrava",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "scheme": "chakrava",
-    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": true,
+      "bundleIdentifier": "com.chakrava.app"
     },
+
     "android": {
       "package": "com.chakrava.app",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png",
-        "backgroundColor": "#0A2540"
-      },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
+
     "web": {
-      "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro"
     },
+
     "plugins": [
-      "expo-router",
-      "expo-secure-store"
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Chakrava needs your location to track waste collection vehicles in real time."
+        }
+      ]
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
+
     "extra": {
       "supabaseUrl": "https://qkirblzamykhelibxpnd.supabase.co",
       "supabaseAnonKey": "sb_publishable_vTmUc8ibHITBQQNprckzgA_UnasoboE",
-      "router": {
-        "asyncRoutes": {
-          "web": true
-        }
-      },
       "eas": {
         "projectId": "c4c64836-a7dc-4f17-8248-344f4b260b6e"
       }
-    }
+    },
+
+    "owner": "hudaa_anjumm"
   }
 }

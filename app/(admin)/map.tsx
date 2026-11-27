@@ -1,39 +1,38 @@
-// ============================================================
-// Chakrava — Vehicle Tracking Map Screen (Admin)
-// ============================================================
-
- // ============================================================
- // Chakrava — Vehicle Tracking Map Screen (Admin)
- // ============================================================
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Layout } from '../../constants/Layout';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { getVehicles, driftVehicles } from '../../services/demoService';
+import { supabase, DEMO_MODE } from '../../services/supabase';
 import { formatRelativeTime } from '../../utils/formatters';
 import type { Vehicle, VehicleStatus } from '../../types';
-import { DEMO_MODE } from '../../services/supabase';
 
-// Try to import react-native-maps for native platforms
 let MapView: any = null;
 let Marker: any = null;
+let Polyline: any = null;
 
 if (Platform.OS !== 'web') {
   try {
     const RNMaps = require('react-native-maps');
     MapView = RNMaps.default;
     Marker = RNMaps.Marker;
+    Polyline = RNMaps.Polyline;
   } catch {}
 }
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
-  on_route: Colors.primary,
-  collecting: Colors.warning,
-  idle: Colors.muted,
-  off_duty: Colors.border,
+  on_route: '#16A34A',
+  collecting: '#F59E0B',
+  idle: '#64748B',
+  off_duty: '#CBD5E1',
 };
 
 const STATUS_ICON: Record<VehicleStatus, string> = {
@@ -43,142 +42,291 @@ const STATUS_ICON: Record<VehicleStatus, string> = {
   off_duty: '😴',
 };
 
+const CENTER = {
+  latitude: 8.562,
+  longitude: 76.983,
+  latitudeDelta: 0.025,
+  longitudeDelta: 0.025,
+};
+
 export default function MapScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(getVehicles);
   const [selected, setSelected] = useState<Vehicle | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [liveGpsReceived, setLiveGpsReceived] = useState(false);
 
-  // Drift vehicle positions every 8 seconds in demo mode
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setVehicles(driftVehicles());
-    }, 8000);
+    if (DEMO_MODE || !supabase) {
+      const timer = setInterval(() => {
+        const next = driftVehicles();
+        setVehicles(next);
+        setSelected(current =>
+          current ? next.find(v => v.id === current.id) ?? current : null
+        );
+      }, 3000);
+      return () => clearInterval(timer);
+    }
+
+    const client = supabase;
+    let mounted = true;
+
+    const updateVehicle = (row: any) => {
+      if (!row?.vehicle_code) return;
+
+      setVehicles(current =>
+        current.map(vehicle =>
+          vehicle.vehicle_code === row.vehicle_code
+            ? {
+                ...vehicle,
+                lat: Number(row.latitude),
+                lng: Number(row.longitude),
+                last_updated_at: row.updated_at,
+              }
+            : vehicle
+        )
+      );
+
+      setSelected(current => {
+        if (!current || current.vehicle_code !== row.vehicle_code) {
+          return current;
+        }
+        return {
+          ...current,
+          lat: Number(row.latitude),
+          lng: Number(row.longitude),
+          last_updated_at: row.updated_at,
+        };
+      });
+
+      setLiveGpsReceived(true);
+    };
+
+    const loadLocations = async () => {
+      const { data, error } = await client
+        .from('vehicle_live_locations')
+        .select('vehicle_code, latitude, longitude, updated_at');
+
+      if (error) {
+        console.error('GPS location loading error:', error.message);
+        return;
+      }
+
+      if (mounted && data) data.forEach(updateVehicle);
+    };
+
+    loadLocations();
+
+    const channel = client
+      .channel('chakrava-map-live-gps')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vehicle_live_locations',
+        },
+        payload => {
+          if (mounted && payload.new) updateVehicle(payload.new);
+        }
+      )
+      .subscribe(status => {
+        console.log('Map realtime:', status);
+      });
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      mounted = false;
+      client.removeChannel(channel);
     };
   }, []);
 
-  const center = {
-    latitude: 8.5620,
-    longitude: 76.9830,
-    latitudeDelta: 0.015,
-    longitudeDelta: 0.015,
-  };
+  const activeVehicles = vehicles.filter(v => v.is_on_duty);
+  const liveLabel = DEMO_MODE
+    ? 'DEMO GPS'
+    : liveGpsReceived
+    ? 'LIVE GPS'
+    : 'WAITING FOR GPS';
 
   return (
     <View style={styles.screen}>
-      {DEMO_MODE && (
-        <View style={styles.demoBanner}>
-          <Text style={styles.demoBannerText}>
-            📡 DEMO MODE — Vehicle positions are simulated and update every 8 seconds
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>CHAKRAVA FLEET</Text>
+          <Text style={styles.title}>Vehicle Tracking</Text>
+          <Text style={styles.subtitle}>Vattiyoorkavu Grama Panchayat</Text>
+        </View>
+        <View style={styles.livePill}>
+          <View
+            style={[
+              styles.liveDot,
+              { backgroundColor: DEMO_MODE ? '#F59E0B' : '#22C55E' },
+            ]}
+          />
+          <Text style={styles.liveText}>{liveLabel}</Text>
+        </View>
+      </View>
+
+      <View style={styles.mapHeading}>
+        <View>
+          <Text style={styles.mapHeadingTitle}>Live fleet map</Text>
+          <Text style={styles.mapHeadingSub}>
+            {activeVehicles.length} vehicles on duty
           </Text>
         </View>
-      )}
-
-      {/* Interactive map for web; native map for Android/iOS */}
-      {Platform.OS === 'web' ? (
-        <View style={styles.map}>
-          {React.createElement('iframe', {
-            title: 'Chakrava vehicle map',
-            src: 'https://www.openstreetmap.org/export/embed.html?bbox=76.96%2C8.54%2C77.01%2C8.58&layer=mapnik&marker=8.562%2C76.983',
-            width: '100%',
-            height: '100%',
-            style: {
-              border: 0,
-              minHeight: 300,
-            },
-          })}
+        <View style={styles.mapTag}>
+          <Text style={styles.mapTagText}>● Tracking</Text>
         </View>
-      ) : MapView ? (
-        <MapView
-          style={styles.map}
-          initialRegion={center}
-          showsUserLocation={false}
-        >
-          {vehicles.map(v => (
-            <Marker
-              key={v.id}
-              coordinate={{ latitude: v.lat, longitude: v.lng }}
-              title={v.vehicle_code}
-              description={`${v.driver_name ?? 'Unassigned'} · ${v.status}`}
-              onPress={() => setSelected(v)}
-            >
-              <View
-                style={[
-                  styles.markerBubble,
-                  { backgroundColor: STATUS_COLOR[v.status] },
-                ]}
+      </View>
+
+      <View style={styles.map}>
+        {Platform.OS === 'web' ? (
+          <>
+            {React.createElement('iframe', {
+              title: 'Chakrava live fleet map',
+              src: 'https://www.openstreetmap.org/export/embed.html?bbox=76.96%2C8.54%2C77.01%2C8.58&layer=mapnik&marker=8.562%2C76.983',
+              width: '100%',
+              height: '100%',
+              style: { border: 0, minHeight: 300 },
+            })}
+            <View pointerEvents="box-none" style={styles.webMarkerLayer}>
+              {vehicles.map(v => {
+                const x = Math.max(
+                  5,
+                  Math.min(95, ((v.lng - 76.96) / 0.05) * 100)
+                );
+                const y = Math.max(
+                  8,
+                  Math.min(90, (1 - (v.lat - 8.54) / 0.04) * 100)
+                );
+                return (
+                  <Pressable
+                    key={v.id}
+                    onPress={() => setSelected(v)}
+                    style={[
+                      styles.webMarker,
+                      {
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        backgroundColor: STATUS_COLOR[v.status],
+                      },
+                    ]}
+                  >
+                    <Text style={styles.markerEmoji}>
+                      {STATUS_ICON[v.status]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : MapView ? (
+          <MapView
+            style={StyleSheet.absoluteFill}
+            initialRegion={CENTER}
+            showsUserLocation={false}
+          >
+            {vehicles.map(v => (
+              <Marker
+                key={v.id}
+                coordinate={{ latitude: v.lat, longitude: v.lng }}
+                title={v.vehicle_code}
+                description={`${v.driver_name ?? 'Driver'} · ${v.status}`}
+                onPress={() => setSelected(v)}
               >
-                <Text style={styles.markerEmoji}>
-                  {STATUS_ICON[v.status]}
-                </Text>
-              </View>
-            </Marker>
-          ))}
-        </MapView>
-      ) : (
-        <View style={styles.mapFallback}>
-          <Text style={styles.mapFallbackTitle}>🗺️ Map View</Text>
-          <Text style={styles.mapFallbackSub}>
-            Native map unavailable.
-            {'\n'}Vehicle positions shown below.
-          </Text>
-          <Text style={styles.mapFallbackCoord}>
-            Area Centre: 8.5620°N, 76.9830°E
+                <View
+                  style={[
+                    styles.nativeMarker,
+                    { backgroundColor: STATUS_COLOR[v.status] },
+                  ]}
+                >
+                  <Text style={styles.markerEmoji}>
+                    {STATUS_ICON[v.status]}
+                  </Text>
+                </View>
+              </Marker>
+            ))}
+          </MapView>
+        ) : (
+          <View style={styles.mapFallback}>
+            <Text style={styles.markerEmoji}>🗺️</Text>
+            <Text style={styles.fallbackTitle}>Map unavailable</Text>
+            <Text style={styles.fallbackText}>
+              Vehicle locations are listed below.
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.mapLegend}>
+          <View style={styles.legendRow}>
+            <View style={[styles.legendDot, { backgroundColor: '#16A34A' }]} />
+            <Text style={styles.legendText}>On route</Text>
+          </View>
+          <View style={styles.legendRow}>
+            <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+            <Text style={styles.legendText}>Collecting</Text>
+          </View>
+        </View>
+
+        <View style={styles.mapFooter}>
+          <Text style={styles.mapFooterText}>
+            📍 Vattiyoorkavu service area
           </Text>
         </View>
-      )}
+      </View>
 
-      {/* Vehicle card list */}
-      <View style={styles.listContainer}>
-        <Text style={styles.listTitle}>
-          Active Vehicles ({vehicles.filter(v => v.is_on_duty).length}/{vehicles.length})
-        </Text>
+      <View style={styles.fleetSection}>
+        <View style={styles.fleetHeader}>
+          <View>
+            <Text style={styles.fleetTitle}>Your fleet</Text>
+            <Text style={styles.fleetSubtitle}>
+              Select a vehicle to view details
+            </Text>
+          </View>
+          <Text style={styles.fleetCount}>
+            {activeVehicles.length}/{vehicles.length}
+          </Text>
+        </View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
+          contentContainerStyle={styles.vehicleList}
         >
           {vehicles.map(v => (
             <Pressable
               key={v.id}
+              onPress={() =>
+                setSelected(current => current?.id === v.id ? null : v)
+              }
               style={[
                 styles.vehicleCard,
                 selected?.id === v.id && styles.vehicleCardSelected,
               ]}
-              onPress={() =>
-                setSelected(selected?.id === v.id ? null : v)
-              }
             >
-              <Text style={styles.vehicleEmoji}>
-                {STATUS_ICON[v.status]}
+              <View style={styles.cardTop}>
+                <View
+                  style={[
+                    styles.vehicleIconBox,
+                    { backgroundColor: STATUS_COLOR[v.status] + '20' },
+                  ]}
+                >
+                  <Text style={styles.vehicleIcon}>
+                    {STATUS_ICON[v.status]}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: STATUS_COLOR[v.status] },
+                  ]}
+                />
+              </View>
+              <Text style={styles.vehicleCode}>{v.vehicle_code}</Text>
+              <Text style={styles.driverName}>
+                {v.driver_name ?? 'Driver unassigned'}
               </Text>
-
-              <Text style={styles.vehicleCode} numberOfLines={1}>
-                {v.vehicle_code}
+              <Text style={styles.vehicleStatus}>
+                {v.status.replace('_', ' ').toUpperCase()}
               </Text>
-
-              <Text style={styles.vehicleDriver} numberOfLines={1}>
-                {v.driver_name ?? 'Unassigned'}
-              </Text>
-
-              <StatusBadge
-                variant={
-                  v.status === 'on_route' || v.status === 'collecting'
-                    ? 'active'
-                    : 'idle'
-                }
-                label={v.status.replace('_', ' ')}
-                small
-              />
-
-              <Text style={styles.vehicleCoord}>
-                {v.lat.toFixed(4)}, {v.lng.toFixed(4)}
-              </Text>
-
-              <Text style={styles.vehicleUpdated}>
+              <Text style={styles.updatedText}>
                 Updated {formatRelativeTime(v.last_updated_at)}
               </Text>
             </Pressable>
@@ -186,28 +334,30 @@ export default function MapScreen() {
         </ScrollView>
       </View>
 
-      {/* Selected vehicle detail panel */}
       {selected && (
-        <View style={styles.detailPanel}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailEmoji}>
-              {STATUS_ICON[selected.status]}
-            </Text>
-
-            <View style={styles.detailInfo}>
-              <Text style={styles.detailCode}>
-                {selected.vehicle_code}
-              </Text>
-
+        <View style={styles.detailCard}>
+          <View style={styles.detailTop}>
+            <View>
+              <Text style={styles.detailLabel}>SELECTED VEHICLE</Text>
+              <Text style={styles.detailTitle}>{selected.vehicle_code}</Text>
               <Text style={styles.detailDriver}>
-                {selected.driver_name ?? 'No driver assigned'}
-              </Text>
-
-              <Text style={styles.detailCoord}>
-                📍 {selected.lat.toFixed(5)}°N, {selected.lng.toFixed(5)}°E
+                Driver: {selected.driver_name ?? 'Not assigned'}
               </Text>
             </View>
-
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setSelected(null)}
+            >
+              <Text style={styles.closeText}>✕</Text>
+            </Pressable>
+          </View>
+          <View style={styles.detailBottom}>
+            <View>
+              <Text style={styles.coordinateLabel}>CURRENT LOCATION</Text>
+              <Text style={styles.coordinateValue}>
+                {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
+              </Text>
+            </View>
             <StatusBadge
               variant={
                 selected.status === 'on_route' ||
@@ -218,13 +368,6 @@ export default function MapScreen() {
               label={selected.status.replace('_', ' ')}
             />
           </View>
-
-          <Pressable
-            style={styles.closeBtn}
-            onPress={() => setSelected(null)}
-          >
-            <Text style={styles.closeBtnText}>✕ Close</Text>
-          </Pressable>
         </View>
       )}
     </View>
@@ -234,181 +377,331 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#F5F8F5',
   },
-
-  demoBanner: {
-    backgroundColor: '#1A5276',
-    paddingVertical: Layout.spacing.sm,
-    paddingHorizontal: Layout.spacing.md,
-  },
-
-  demoBannerText: {
-    color: '#85C1E9',
-    fontSize: Layout.fontSize.xs,
-    textAlign: 'center',
-  },
-
-  map: {
-    flex: 1,
-    minHeight: 300,
-  },
-
-  mapFallback: {
-    flex: 1,
-    backgroundColor: Colors.surfaceAlt,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Layout.spacing.xl,
-    gap: Layout.spacing.sm,
-    margin: Layout.spacing.md,
-    borderRadius: Layout.radius.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Colors.border,
+    backgroundColor: '#FFFFFF',
   },
-
-  mapFallbackTitle: {
-    fontSize: Layout.fontSize.xxl,
-    textAlign: 'center',
-  },
-
-  mapFallbackSub: {
-    fontSize: Layout.fontSize.sm,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-
-  mapFallbackCoord: {
-    fontSize: Layout.fontSize.xs,
-    color: Colors.muted,
-  },
-
-  markerBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.textInverse,
-    ...Layout.shadow.md,
-  },
-
-  markerEmoji: {
-    fontSize: 20,
-  },
-
-  listContainer: {
-    backgroundColor: Colors.surface,
-    paddingTop: Layout.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-
-  listTitle: {
-    fontSize: Layout.fontSize.sm,
-    fontWeight: Layout.fontWeight.bold,
-    color: Colors.text,
-    paddingHorizontal: Layout.spacing.md,
-    marginBottom: Layout.spacing.sm,
-  },
-
-  hScroll: {
-    paddingHorizontal: Layout.spacing.md,
-    paddingBottom: Layout.spacing.md,
-    gap: Layout.spacing.sm,
-  },
-
-  vehicleCard: {
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: Layout.radius.lg,
-    padding: Layout.spacing.md,
-    minWidth: 150,
-    gap: 4,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    ...Layout.shadow.sm,
-  },
-
-  vehicleCardSelected: {
-    borderColor: Colors.primary,
-  },
-
-  vehicleEmoji: {
-    fontSize: 28,
-  },
-
-  vehicleCode: {
-    fontSize: Layout.fontSize.sm,
-    fontWeight: Layout.fontWeight.bold,
-    color: Colors.text,
-  },
-
-  vehicleDriver: {
-    fontSize: Layout.fontSize.xs,
-    color: Colors.textSecondary,
-  },
-
-  vehicleCoord: {
+  eyebrow: {
     fontSize: 10,
-    color: Colors.muted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: '#16834A',
   },
-
-  vehicleUpdated: {
-    fontSize: 10,
-    color: Colors.muted,
+  title: {
+    fontSize: 25,
+    fontWeight: '800',
+    color: '#163B2A',
+    marginTop: 4,
   },
-
-  detailPanel: {
-    backgroundColor: Colors.surface,
-    padding: Layout.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: Layout.spacing.sm,
-    ...Layout.shadow.lg,
+  subtitle: {
+    fontSize: 12,
+    color: '#718078',
+    marginTop: 3,
   },
-
-  detailRow: {
+  livePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Layout.spacing.sm,
+    gap: 6,
+    backgroundColor: '#EAF7EE',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-
-  detailEmoji: {
-    fontSize: 36,
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
-
-  detailInfo: {
+  liveText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#176B3D',
+  },
+  mapHeading: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mapHeadingTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#183C2B',
+  },
+  mapHeadingSub: {
+    fontSize: 11,
+    color: '#7A8980',
+    marginTop: 3,
+  },
+  mapTag: {
+    backgroundColor: '#E5F4E9',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  mapTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16834A',
+  },
+  map: {
     flex: 1,
-    gap: 2,
+    minHeight: 270,
+    marginHorizontal: 14,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#E6EEE7',
   },
-
-  detailCode: {
-    fontSize: Layout.fontSize.md,
-    fontWeight: Layout.fontWeight.bold,
-    color: Colors.text,
+  webMarkerLayer: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 5,
   },
-
+  webMarker: {
+    position: 'absolute',
+    width: 38,
+    height: 38,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateX: -19 }, { translateY: -19 }],
+    elevation: 5,
+  },
+  nativeMarker: {
+    width: 42,
+    height: 42,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+  },
+  markerEmoji: {
+    fontSize: 19,
+  },
+  mapLegend: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    gap: 6,
+    elevation: 3,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#425449',
+  },
+  mapFooter: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    elevation: 3,
+  },
+  mapFooterText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#344E3D',
+  },
+  mapFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  fallbackTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#183C2B',
+  },
+  fallbackText: {
+    fontSize: 12,
+    color: '#718078',
+  },
+  fleetSection: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: 16,
+    paddingBottom: 12,
+    marginTop: 14,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+  },
+  fleetHeader: {
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fleetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#183C2B',
+  },
+  fleetSubtitle: {
+    fontSize: 11,
+    color: '#7A8980',
+    marginTop: 3,
+  },
+  fleetCount: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#16834A',
+    backgroundColor: '#EAF7EE',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 15,
+  },
+  vehicleList: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    gap: 10,
+  },
+  vehicleCard: {
+    width: 158,
+    backgroundColor: '#F7FAF7',
+    borderWidth: 1.5,
+    borderColor: '#E6EDE7',
+    borderRadius: 16,
+    padding: 13,
+  },
+  vehicleCardSelected: {
+    borderColor: '#16834A',
+    backgroundColor: '#F0FAF3',
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  vehicleIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleIcon: {
+    fontSize: 20,
+  },
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  vehicleCode: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#183C2B',
+  },
+  driverName: {
+    fontSize: 10,
+    color: '#718078',
+    marginTop: 4,
+  },
+  vehicleStatus: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#16834A',
+    marginTop: 9,
+  },
+  updatedText: {
+    fontSize: 9,
+    color: '#94A098',
+    marginTop: 5,
+  },
+  detailCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 14,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#DDEBE0',
+    elevation: 3,
+  },
+  detailTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  detailLabel: {
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: '800',
+    color: '#16834A',
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#183C2B',
+    marginTop: 4,
+  },
   detailDriver: {
-    fontSize: Layout.fontSize.sm,
-    color: Colors.textSecondary,
+    fontSize: 11,
+    color: '#718078',
+    marginTop: 4,
   },
-
-  detailCoord: {
-    fontSize: Layout.fontSize.xs,
-    color: Colors.muted,
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F1F5F1',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  closeBtn: {
-    alignSelf: 'flex-end',
-    padding: Layout.spacing.sm,
+  closeText: {
+    fontSize: 15,
+    color: '#526257',
   },
-
-  closeBtnText: {
-    fontSize: Layout.fontSize.sm,
-    color: Colors.muted,
+  detailBottom: {
+    borderTopWidth: 1,
+    borderTopColor: '#EAF0EA',
+    marginTop: 12,
+    paddingTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  coordinateLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94A098',
+  },
+  coordinateValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#344E3D',
+    marginTop: 4,
   },
 });

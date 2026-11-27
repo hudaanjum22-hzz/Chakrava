@@ -187,6 +187,151 @@ export const DEMO_VEHICLES: Vehicle[] = [
     is_on_duty: false,
     last_updated_at: new Date().toISOString(),
   },
+
+
+
+
+
+
+
+
+
+
+
+
+{
+    id: 'vehicle-10',
+    vehicle_code: 'KL-01-WC-8137',
+    driver_id: undefined,
+    driver_name: 'Driver 10',
+    lat: 8.5609,
+    lng: 76.9802,
+    status: 'on_route',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-11',
+    vehicle_code: 'KL-01-WC-7248',
+    driver_id: undefined,
+    driver_name: 'Driver 11',
+    lat: 8.5622,
+    lng: 76.9813,
+    status: 'collecting',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-12',
+    vehicle_code: 'KL-01-WC-6359',
+    driver_id: undefined,
+    driver_name: 'Driver 12',
+    lat: 8.5635,
+    lng: 76.9824,
+    status: 'idle',
+    is_on_duty: false,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-13',
+    vehicle_code: 'KL-01-WC-5460',
+    driver_id: undefined,
+    driver_name: 'Driver 13',
+    lat: 8.5648,
+    lng: 76.9835,
+    status: 'on_route',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-14',
+    vehicle_code: 'KL-01-WC-4571',
+    driver_id: undefined,
+    driver_name: 'Driver 14',
+    lat: 8.5570,
+    lng: 76.9846,
+    status: 'collecting',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-15',
+    vehicle_code: 'KL-01-WC-3682',
+    driver_id: undefined,
+    driver_name: 'Driver 15',
+    lat: 8.5583,
+    lng: 76.9857,
+    status: 'idle',
+    is_on_duty: false,
+    last_updated_at: new Date().toISOString(),
+  },
+
+{
+    id: 'vehicle-04',
+    vehicle_code: 'KL-01-WC-6620',
+    driver_id: undefined,
+    driver_name: 'Arun Kumar',
+    lat: 8.5570,
+    lng: 76.9780,
+    status: 'on_route',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-05',
+    vehicle_code: 'KL-01-WC-4418',
+    driver_id: undefined,
+    driver_name: 'Manoj Das',
+    lat: 8.5585,
+    lng: 76.9792,
+    status: 'collecting',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-06',
+    vehicle_code: 'KL-01-WC-3295',
+    driver_id: undefined,
+    driver_name: 'Vijay Nair',
+    lat: 8.5600,
+    lng: 76.9804,
+    status: 'idle',
+    is_on_duty: false,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-07',
+    vehicle_code: 'KL-01-WC-2186',
+    driver_id: undefined,
+    driver_name: 'Ramesh Babu',
+    lat: 8.5615,
+    lng: 76.9816,
+    status: 'on_route',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-08',
+    vehicle_code: 'KL-01-WC-1054',
+    driver_id: undefined,
+    driver_name: 'Kiran Raj',
+    lat: 8.5630,
+    lng: 76.9828,
+    status: 'collecting',
+    is_on_duty: true,
+    last_updated_at: new Date().toISOString(),
+  },
+{
+    id: 'vehicle-09',
+    vehicle_code: 'KL-01-WC-9026',
+    driver_id: undefined,
+    driver_name: 'Driver 09',
+    lat: 8.5645,
+    lng: 76.9840,
+    status: 'idle',
+    is_on_duty: false,
+    last_updated_at: new Date().toISOString(),
+  }
 ];
 
 // ─── Demo Collection Tasks ─────────────────────────────────────
